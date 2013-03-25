@@ -1,81 +1,153 @@
 jQuery(function($) {
 
-	var initial = [{ val: 19, max: 30 }, { val: 26, max: 30 }, { val: 8, max: 40 }];
+	/* CONFIG */
 
-	var ratio = function(obj) {
-		return obj.val / obj.max;
+	var metaData = {
+		energy: {
+			maxScore: 30,
+			label: 'Energy',
+			color: '#d99e18',
+			scale: d3.scale.linear().domain([0, 30])
+		},
+		water: {
+			maxScore: 30,
+			label: 'Water',
+			color: '#87b8a9',
+			scale: d3.scale.linear().domain([0, 30])
+		},
+		human: {
+			maxScore: 40,
+			label: 'Human Experience',
+			color: '#8180b3',
+			scale: d3.scale.linear().domain([0, 40])
+		}
 	};
 
-	var transformed = _(initial).map(ratio);
+	var
+		margin = { top: 60, right: 60, bottom: 60, left: 60 },
+		width = 800 - margin.left - margin.right,
+		height = 600 - margin.top - margin.bottom,
+		arcEnd = 1.5 * Math.PI,
+		barMargin = 10,
+		barWidth = 40,
+		barPadded = barWidth + barMargin;
 
-	var WIDTH = 420;
-	var HEIGHT = 40 * transformed.length;
+	/* DATA FUNCTIONS */
 
-	var x = d3.scale.linear()
-		.domain([0, 1])
-		.range([0, WIDTH]);
 
-	var y = d3.scale.ordinal()
-		.domain(transformed)
-		.rangeBands([0, HEIGHT]);
+
+	/* DATA */
+
+	var DATA = [
+		{ key: 'energy', val: 0, prev: 0 },
+		{ key: 'water', val: 0, prev: 0 },
+		{ key: 'human', val: 0, prev: 0 }
+	];
+
+	var
+		half = DATA.length * barWidth, // TODO: better name
+		radius = half + barMargin;
+
+	/* DRAWING FUNCTIONS */
+
+	var bgArc = d3.svg.arc()
+		.startAngle(0)
+		.endAngle(arcEnd)
+		.innerRadius(function(d, i) { return radius + i * barPadded; })
+		.outerRadius(function(d, i) { return radius + i * barPadded + barWidth; });
+
+	var scoreArc = d3.svg.arc()
+		.startAngle(0)
+		.endAngle(function(d) { return metaData[d.key].scale(d.val) * arcEnd; })
+		.innerRadius(function(d, i) { return radius + i * barPadded; })
+		.outerRadius(function(d, i) { return radius + i * barPadded + barWidth; });
+
+	var arcTween = function(b, i) {
+		var x = d3.interpolate({ val: b.prev }, b);
+		return function(t) {
+			return scoreArc(x(t), i);
+		};
+	};
+
+	/* DRAWING */
+
+	// Container
+	var svg = d3.select('body').append('svg')
+		.attr('width', width + margin.left + margin.right)
+		.attr('height', height + margin.top + margin.bottom)
+	.append('g')
+		.attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
 	
-	var chart = d3.select("body").append("svg")
-		.attr("class", "chart")
-		.attr("width", WIDTH)
-		.attr("height", HEIGHT);
+	// Extensions
+	svg.selectAll('rect.horiz')
+		.data(DATA)
+	.enter().append('rect')
+		.classed('horiz', true)
+		.attr('y', function(d, i) { return i * (barWidth + barMargin); })
+		.attr('width', width / 2)
+		.attr('height', barWidth)
+		.style('fill', function(d) { return metaData[d.key].color; });
 
-	chart.selectAll("rect")
-		.data(transformed)
-	.enter().append("rect")
-		.attr("y", y)
-		.attr("width", x)
-		.attr("height", y.rangeBand());
+	svg.selectAll('rect.vert')
+		.data(DATA)
+	.enter().append('rect')
+		.classed('vert', true)
+		.attr('x', function(d, i) { return i * barPadded; })
+		.attr('width', barWidth)
+		.attr('height', half)
+		.style('fill', '#555')
+		.attr('transform', 'translate(70, 150)');
 
-	chart.selectAll("text")
-		.data(transformed)
-	.enter().append("text")
-		.attr("class", "bar")
-		.attr("x", x)
-		.attr("y", function(d) { return y(d) + y.rangeBand() / 2; })
-		.attr("dx", -3)
-		.attr("dy", ".35em")
-		.attr("text-anchor", "end")
-		.text(function(d) { return d.toFixed(2) * 100 + '%'; });
+	// Labels
+	svg.selectAll('text')
+		.data(DATA)
+	.enter().append('text')
+		.attr('class', 'bar')
+		.attr('x', 0)
+		.attr('y', function(d, i) { return i * (barWidth + barMargin) + (barWidth / 2); })
+		.attr('dx', 15)
+		.attr('dy', '.35em')
+		.attr('text-anchor', 'left')
+		.text(function(d) { return metaData[d.key].label.toUpperCase(); });
 
-	chart.append("line")
-		.attr("x1", WIDTH - 0.5)
-		.attr("x2", WIDTH - 0.5)
-		.attr("y1", 0)
-		.attr("y2", HEIGHT * transformed.length)
-		.style("stroke", "#000");
+	// Background Bars
+	var g = svg.selectAll('g')
+		.data(DATA.reverse()) // HACK: Shouldn't need this
+	.enter().append('g')
+		.attr('transform', 'translate(' + width / 2 + ', 270' + ')');
 
-	var updateBars = function() {
-		$.getJSON('/update.json', function(data) {
+	g.append('path')
+		.attr('d', bgArc)
+		.classed('bg', true)
+		.style('fill', '#555');
 
-			var _data = _(data);
+	g.append('path')
+		.attr('d', scoreArc)
+		.classed('score', true)
+		.style('fill', function(d) { return metaData[d.key].color; });
 
-			var sum = _data.reduce(function(prev, obj) {
-				return prev + obj.val;
-			}, 0);
+	/* AJAX */
 
-			var newData = _data.map(ratio);
+	var updateScore = function() {
+		$.getJSON('/update.json', function(update) {
 
-			chart.selectAll("rect")
-				.data(newData)
-			.transition()
-				.duration(1000)
-				.attr("width", x);
+			var sum = d3.sum(update, function(obj) {
+				return obj.val;
+			});
 
-			chart.selectAll("text")
-				.data(newData)
-			.transition()
-				.duration(1000)
-				.attr("x", x)
-				.text(function(d) { return d.toFixed(2) * 100 + '%'; });
+			DATA = update;
+
+			var g = svg.selectAll('g')
+				.data(update.reverse());
+			
+			g.select('path.score')
+				.transition()
+					.duration(1000)
+					.attrTween('d', arcTween);
 		});
 	};
 
-	updateBars();
-	setInterval(updateBars, 5000);
+	updateScore();
+	setInterval(updateScore, 5000);
 
 });

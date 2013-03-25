@@ -1,10 +1,3 @@
+body { background: #222; margin: 0; padding: 0; }
 
-
-.chart rect {
-  stroke: white;
-  fill: steelblue;
-}
-
-.chart text.bar {
-  fill: white;
-}
+svg { display: block; margin: 0 auto; }
