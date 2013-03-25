@@ -31,8 +31,8 @@ get '/update.json' do
   REDIS.set('human', human)
 
   [
-    { :key => :energy, :val => [[energy.to_i, 0].max, 30].min, :prev => pEnergy.to_i },
+    { :key => :human, :val => [[human.to_i, 0].max, 40].min, :prev => pHuman.to_i },
     { :key => :water, :val => [[water.to_i, 0].max, 30].min, :prev => pWater.to_i },
-    { :key => :human, :val => [[human.to_i, 0].max, 40].min, :prev => pHuman.to_i }
+    { :key => :energy, :val => [[energy.to_i, 0].max, 30].min, :prev => pEnergy.to_i }
   ].to_json
 end

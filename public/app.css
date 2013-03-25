@@ -1,3 +1,3 @@
-body { background: #222; margin: 0; padding: 0; }
+body { background: #fff; margin: 0; padding: 0; }
 
-svg { display: block; margin: 0 auto; }
+svg.main { display: block; margin: 0 auto; }
