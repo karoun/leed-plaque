@@ -107,7 +107,6 @@ d3.json(UPDATE_URL, function(error, data) {
 		.style('fill', '#eee')
 		.text(function() { return d3.sum(DATA, function(d) { return d.val; }); });
 
-
 	// Extensions
 	var ext = svg.append('g')
 		.classed('extensions', true)
@@ -191,7 +190,14 @@ var updateScore = function() {
 				.attr('transform', function(d, i) { return 'translate(' + scoreArc.centroid(d, i) + ')'; })
 				.text(function(d) { return d.val; });
 
-		svg.select('g.sum text.value').text(sum);
+		svg.select('g.sum text.value')
+			.transition()
+				.duration(500)
+				.style('fill-opacity', 1e-6) // 0
+			.transition()
+				.duration(500)
+				.text(sum)
+				.style('fill-opacity', 1);
 	});
 };
 

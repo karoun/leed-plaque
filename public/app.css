@@ -1,3 +1,11 @@
-body { background: #fff; margin: 0; padding: 0; }
+body { 
+	margin: 0; padding: 0;
+	background: #1c1c1c; 
+	font-family: 'Lato', sans-serif; 
+	font-weight: 900; 
+}
 
-svg.main { display: block; margin: 0 auto; }
+svg.main { 
+	display: block; 
+	margin: 0 auto;
+}
