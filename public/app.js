@@ -78,12 +78,42 @@ var svg = d3.select('body').append('svg')
 d3.json(UPDATE_URL, function(error, data) {
 	if (error) { return; }
 	
+	var sum = svg.append('g')
+		.classed('sum', true);
+
+	sum.append('circle')
+		.classed('outer', true)
+		.attr('cx', width / 2)
+		.attr('cy', height / 2 + DATA.length * barMargin)
+		.attr('r', half)
+		.style('fill', '#888');
+
+	sum.append('circle')
+		.classed('inner', true)
+		.attr('cx', width / 2)
+		.attr('cy', height / 2 + DATA.length * barMargin)
+		.attr('r', half - 20)
+		.style('fill', '#888')
+		.attr('stroke', '#eee')
+		.attr('stroke-width', 4);
+
+	sum.append('text')
+		.classed('value', true)
+		.attr('x', width / 2)
+		.attr('y', height / 2 + DATA.length * barMargin)
+		.attr('dy', '.35em')
+		.attr('text-anchor', 'middle')
+		.attr('font-size', 100)
+		.style('fill', '#eee')
+		.text(function() { return d3.sum(DATA, function(d) { return d.val; }); });
+
+
+	// Extensions
 	var ext = svg.append('g')
 		.classed('extensions', true)
 		.selectAll('rect')
 		.data(DATA).enter();
 
-	// Extensions
 	ext.append('rect')
 		.classed('horiz', true)
 		.attr('y', function(d, i) { return i * (barWidth + barMargin); })
@@ -99,7 +129,7 @@ d3.json(UPDATE_URL, function(error, data) {
 		.style('fill', '#555')
 		.attr('transform', 'translate(70, 150)');
 
-	// Bar Labels
+	// Extension Labels
 	ext.append('text')
 		.attr('x', 0)
 		.attr('y', function(d, i) { return i * (barWidth + barMargin) + (barWidth / 2); })
@@ -147,7 +177,7 @@ var updateScore = function() {
 			return obj.val;
 		});
 
-		var bar = d3.selectAll('g.bar')
+		var bar = svg.selectAll('g.bar')
 			.data(update.reverse()); // HACK: Shouldn't need this
 		
 		bar.select('path.score')
@@ -160,6 +190,8 @@ var updateScore = function() {
 				.duration(1000)
 				.attr('transform', function(d, i) { return 'translate(' + scoreArc.centroid(d, i) + ')'; })
 				.text(function(d) { return d.val; });
+
+		svg.select('g.sum text.value').text(sum);
 	});
 };
 
