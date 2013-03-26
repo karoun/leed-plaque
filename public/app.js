@@ -26,7 +26,7 @@ var metaData = {
 
 var
 	UPDATE_URL = '/update.json',
-	margin = { top: 60, right: 60, bottom: 60, left: 60 },
+	margin = { top: 30, right: 60, bottom: 60, left: 60 },
 	arcEnd = 1.5 * Math.PI,
 	barMargin = 10,
 	barWidth = 40,
@@ -54,8 +54,8 @@ var
 	diameter = count * half + 2 * count * barMargin,
 	third = half + count * barMargin,
 	radius = half + barMargin,
-	width = diameter + margin.top + margin.bottom,
-	height = diameter + margin.left + margin.right;
+	width = diameter + margin.left + margin.right,
+	height = diameter + margin.top + margin.bottom;
 
 /* DRAWING FUNCTIONS */
 
@@ -99,14 +99,14 @@ d3.json(UPDATE_URL, function(error, data) {
 	total.append('circle')
 		.classed('outer', true)
 		.attr('cx', width / 2)
-		.attr('cy', height / 2)
+		.attr('cy', height / 2 + 15)
 		.attr('r', half)
 		.style('fill', '#888');
 
 	total.append('circle')
 		.classed('inner', true)
 		.attr('cx', width / 2)
-		.attr('cy', height / 2)
+		.attr('cy', height / 2 + 15)
 		.attr('r', half - 20)
 		.style('fill', '#888')
 		.attr('stroke', '#eee')
@@ -115,7 +115,7 @@ d3.json(UPDATE_URL, function(error, data) {
 	total.append('text')
 		.classed('value', true)
 		.attr('x', width / 2)
-		.attr('y', height / 2)
+		.attr('y', height / 2 + 15)
 		.attr('dy', '.35em')
 		.attr('text-anchor', 'middle')
 		.attr('font-size', 100)
@@ -229,6 +229,7 @@ var updateScore = function() {
 			oldSum = parseInt(sumSvg.text(), 10),
 			newSum = sum(update);
 
+		// no change; don't animate
 		if (oldSum === newSum) { return; }
 
 		sumSvg

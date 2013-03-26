@@ -16,9 +16,15 @@ body {
 	font-weight: 900; 
 }
 
-svg.main { 
+h1, svg.main {
 	display: block; 
 	margin: 0 auto;
+}
+
+h1 {
+	margin-top: 30px;
+	text-align: center;
+	color: #ada6a0;
 }
 
 text.icon {
