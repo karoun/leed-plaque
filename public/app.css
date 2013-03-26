@@ -1,3 +1,14 @@
+@font-face {
+	font-family: 'Entypo';
+	src: url('entypo/entypo.eot');
+	src: url('entypo/entypo.eot?#iefix') format('embedded-opentype'),
+			 url('entypo/entypo.woff') format('woff'),
+			 url('entypo/entypo.ttf') format('truetype'),
+			 url('entypo/entypo.svg#entyporegular') format('svg');
+	font-weight: normal;
+	font-style: normal;
+}
+
 body { 
 	margin: 0; padding: 0;
 	background: #1c1c1c; 
@@ -8,4 +19,8 @@ body {
 svg.main { 
 	display: block; 
 	margin: 0 auto;
+}
+
+text.icon {
+	font-family: 'Entypo';
 }

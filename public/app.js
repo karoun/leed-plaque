@@ -5,18 +5,21 @@ var metaData = {
 		maxScore: 30,
 		label: 'Energy',
 		color: '#d99e18',
+		glyph: '⚡', // HACK: http://www.entypo.com/characters/
 		scale: d3.scale.linear().domain([0, 30])
 	},
 	water: {
 		maxScore: 30,
 		label: 'Water',
 		color: '#87b8a9',
+		glyph: '💦', // HACK: http://www.entypo.com/characters/
 		scale: d3.scale.linear().domain([0, 30])
 	},
 	human: {
 		maxScore: 40,
 		label: 'Human Experience',
 		color: '#8180b3',
+		glyph: '👤', // HACK: http://www.entypo.com/characters/
 		scale: d3.scale.linear().domain([0, 40])
 	}
 };
@@ -24,8 +27,6 @@ var metaData = {
 var
 	UPDATE_URL = '/update.json',
 	margin = { top: 60, right: 60, bottom: 60, left: 60 },
-	width = 800 - margin.left - margin.right,
-	height = 600 - margin.top - margin.bottom,
 	arcEnd = 1.5 * Math.PI,
 	barMargin = 10,
 	barWidth = 40,
@@ -48,8 +49,13 @@ var DATA = [
 ];
 
 var
-	half = DATA.length * barWidth, // TODO: better name
-	radius = half + barMargin;
+	count = DATA.length,
+	half = count * barWidth, // TODO: better name
+	diameter = count * half + 2 * count * barMargin,
+	third = half + count * barMargin,
+	radius = half + barMargin,
+	width = diameter + margin.top + margin.bottom,
+	height = diameter + margin.left + margin.right;
 
 /* DRAWING FUNCTIONS */
 
@@ -93,14 +99,14 @@ d3.json(UPDATE_URL, function(error, data) {
 	total.append('circle')
 		.classed('outer', true)
 		.attr('cx', width / 2)
-		.attr('cy', height / 2 + data.length * barMargin)
+		.attr('cy', height / 2)
 		.attr('r', half)
 		.style('fill', '#888');
 
 	total.append('circle')
 		.classed('inner', true)
 		.attr('cx', width / 2)
-		.attr('cy', height / 2 + data.length * barMargin)
+		.attr('cy', height / 2)
 		.attr('r', half - 20)
 		.style('fill', '#888')
 		.attr('stroke', '#eee')
@@ -109,7 +115,7 @@ d3.json(UPDATE_URL, function(error, data) {
 	total.append('text')
 		.classed('value', true)
 		.attr('x', width / 2)
-		.attr('y', height / 2 + data.length * barMargin)
+		.attr('y', height / 2)
 		.attr('dy', '.35em')
 		.attr('text-anchor', 'middle')
 		.attr('font-size', 100)
@@ -135,7 +141,7 @@ d3.json(UPDATE_URL, function(error, data) {
 		.attr('width', barWidth)
 		.attr('height', half)
 		.style('fill', '#555')
-		.attr('transform', 'translate(70, 150)');
+		.attr('transform', 'translate(0,' + third + ')');
 
 	// Extension Labels
 	ext.append('text')
@@ -145,6 +151,19 @@ d3.json(UPDATE_URL, function(error, data) {
 		.attr('dy', '.35em')
 		.attr('text-anchor', 'left')
 		.text(function(d) { return metaData[d.key].label.toUpperCase(); });
+
+	// Extension Icons
+	ext.append('text')
+		.classed('icon', true)
+		.attr('x', 0)
+		.attr('y', function(d, i) { return i * (barWidth + barMargin) + (barWidth / 2); })
+		.attr('dx', -25)
+		.attr('dy', 0)
+		.attr('text-anchor', 'middle')
+		.attr('font-size', 60)
+		.style('fill', function(d) { return metaData[d.key].color; })
+		.style('dominant-baseline', 'central')
+		.text(function(d) { return metaData[d.key].glyph; });
 
 	// Bar Container
 	var bars = svg.append('g')
@@ -173,6 +192,8 @@ d3.json(UPDATE_URL, function(error, data) {
 		.attr('dy', '.35em')
 		.attr('text-anchor', 'middle')
 		.text(function(d) { return d.val; });
+
+	setInterval(updateScore, 5000);
 });
 
 /* AJAX */
@@ -180,6 +201,14 @@ d3.json(UPDATE_URL, function(error, data) {
 var updateScore = function() {
 	d3.json(UPDATE_URL, function(error, update) {
 		if (error) { return; } // TODO: alert the user somehow
+
+		var same = update.every(function(obj) {
+			return obj.val === obj.prev;
+		});
+
+		if (same) { return; }
+
+		console.log(svg.select('g.sum text.value').text());
 
 		var bar = svg.selectAll('g.bar')
 			.data(update.reverse()); // HACK: Shouldn't need this
@@ -195,16 +224,20 @@ var updateScore = function() {
 				.attr('transform', function(d, i) { return 'translate(' + scoreArc.centroid(d, i) + ')'; })
 				.text(function(d) { return d.val; });
 
-		svg.select('g.sum text.value')
+		var
+			sumSvg = svg.select('g.sum text.value'),
+			oldSum = parseInt(sumSvg.text(), 10),
+			newSum = sum(update);
+
+		if (oldSum === newSum) { return; }
+
+		sumSvg
 			.transition()
 				.duration(500)
 				.style('fill-opacity', 1e-6) // 0
 			.transition()
 				.duration(500)
-				.text(sum(update))
+				.text(newSum)
 				.style('fill-opacity', 1);
 	});
 };
-
-updateScore();
-setInterval(updateScore, 5000);
