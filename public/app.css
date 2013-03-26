@@ -27,6 +27,8 @@ h1 {
 	color: #ada6a0;
 }
 
+#scratch { display: none; }
+
 text.icon {
 	font-family: 'Entypo';
 }

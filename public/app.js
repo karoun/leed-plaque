@@ -1,6 +1,20 @@
+/*
+TODO:
+- fix data reversal issue, replace with .data(data, getKey)
+- replace hard-coded positions with math
+- replace offset math with d3.scale objects (rangeBands)
+- work out glyph solution, maybe with <foreignObject>?
+- remove :prev from JSON, replace with in-place
+- add warning on disconnect
+- add localStorage
+- investigate d3 usage for canvas manipulation
+- formalize config usage
+- more comments
+*/
+
 /* CONFIG */
 
-var metaData = {
+var CONFIG = {
 	energy: {
 		maxScore: 30,
 		label: 'Energy',
@@ -42,17 +56,11 @@ var sum = function(arr) {
 
 /* DATA */
 
-var DATA = [
-	{ key: 'human', val: 40, prev: 40 },
-	{ key: 'water', val: 30, prev: 30 },
-	{ key: 'energy', val: 30, prev: 30 }
-];
-
 var
-	count = DATA.length,
-	half = count * barWidth, // TODO: better name
-	diameter = count * half + 2 * count * barMargin,
-	third = half + count * barMargin,
+	COUNT = 3,
+	half = COUNT * barWidth, // TODO: better name
+	diameter = COUNT * half + 2 * COUNT * barMargin,
+	third = half + COUNT * barMargin,
 	radius = half + barMargin,
 	width = diameter + margin.left + margin.right,
 	height = diameter + margin.top + margin.bottom;
@@ -67,7 +75,7 @@ var bgArc = d3.svg.arc()
 
 var scoreArc = d3.svg.arc()
 	.startAngle(0)
-	.endAngle(function(d) { return metaData[d.key].scale(d.val) * arcEnd; })
+	.endAngle(function(d) { return CONFIG[d.key].scale(d.val) * arcEnd; })
 	.innerRadius(function(d, i) { return radius + i * barPadded; })
 	.outerRadius(function(d, i) { return radius + i * barPadded + barWidth; });
 
@@ -76,6 +84,32 @@ var arcTween = function(b, i) {
 	return function(t) {
 		return scoreArc(x(t), i);
 	};
+};
+
+// adapted from d3.arc.centroid
+var arcLabel = function(arc, d, i) {
+	var
+		offset = -Math.PI / 2, padding = 3 * Math.PI / 180, // 3 degrees
+		r = (arc.innerRadius()(d, i) + arc.outerRadius()(d, i)) / 2,
+		a = (arc.startAngle()(d) + arc.endAngle()(d)) + offset - padding;
+	return [Math.cos(a) * r, Math.sin(a) * r];
+};
+
+var updateFavicon = function(total) {
+	var
+		canvas = document.getElementById('scratch'),
+		link = document.getElementById('favicon'),
+		ctx, fontSize;
+
+	if (canvas.getContext) {
+		canvas.height = canvas.width = 16;
+		ctx = canvas.getContext('2d');
+		fontSize = (total > 99) ? 7 : 11;
+		ctx.font = 'bold ' + fontSize + 'px \'Lato\', sans-serif';
+		ctx.fillStyle = '#000';
+		ctx.fillText(total, 2, 12);
+		link.href = canvas.toDataURL();
+	}
 };
 
 /* DRAWING */
@@ -133,7 +167,7 @@ d3.json(UPDATE_URL, function(error, data) {
 		.attr('y', function(d, i) { return i * (barWidth + barMargin); })
 		.attr('width', width / 2)
 		.attr('height', barWidth)
-		.style('fill', function(d) { return metaData[d.key].color; });
+		.style('fill', function(d) { return CONFIG[d.key].color; });
 
 	ext.append('rect')
 		.classed('vert', true)
@@ -150,7 +184,15 @@ d3.json(UPDATE_URL, function(error, data) {
 		.attr('dx', 15)
 		.attr('dy', '.35em')
 		.attr('text-anchor', 'left')
-		.text(function(d) { return metaData[d.key].label.toUpperCase(); });
+		.text(function(d) { return CONFIG[d.key].label.toUpperCase(); });
+
+	ext.append('text')
+		.attr('x', function(d, i) { return i * (barWidth + barMargin) + (barWidth / 2); })
+		.attr('y', third + 25)
+		.attr('font-size', 25)
+		.attr('text-anchor', 'middle')
+		.style('fill', '#888')
+		.text(function(d) { return CONFIG[d.key].maxScore; });
 
 	// Extension Icons
 	ext.append('text')
@@ -161,16 +203,16 @@ d3.json(UPDATE_URL, function(error, data) {
 		.attr('dy', 0)
 		.attr('text-anchor', 'middle')
 		.attr('font-size', 60)
-		.style('fill', function(d) { return metaData[d.key].color; })
+		.style('fill', function(d) { return CONFIG[d.key].color; })
 		.style('dominant-baseline', 'central')
-		.text(function(d) { return metaData[d.key].glyph; });
+		.text(function(d) { return CONFIG[d.key].glyph; });
 
 	// Bar Container
 	var bars = svg.append('g')
 		.classed('bars', true)
 		.attr('transform', 'translate(' + width / 2 + ', 270)')
 		.selectAll('g.bar')
-		.data(data.reverse()) // HACK: Shouldn't need this
+		.data(data.reverse())
 	.enter().append('g').classed('bar', true);
 
 	// Background Bars
@@ -183,16 +225,19 @@ d3.json(UPDATE_URL, function(error, data) {
 	bars.append('path')
 		.attr('d', scoreArc)
 		.classed('score', true)
-		.style('fill', function(d) { return metaData[d.key].color; });
+		.style('fill', function(d) { return CONFIG[d.key].color; });
 
 	// Scores
 	bars.append('text')
 		.classed('score', true)
-		.attr('transform', function(d, i) { return 'translate(' + scoreArc.centroid(d, i) + ')'; })
+		.attr('transform', function(d, i) {
+			return 'translate(' + arcLabel(scoreArc, d, i) + ')';
+		})
 		.attr('dy', '.35em')
 		.attr('text-anchor', 'middle')
 		.text(function(d) { return d.val; });
 
+	updateFavicon(sum(data));
 	setInterval(updateScore, 5000);
 });
 
@@ -206,22 +251,28 @@ var updateScore = function() {
 			return obj.val === obj.prev;
 		});
 
+		// no change; don't animate
 		if (same) { return; }
 
-		console.log(svg.select('g.sum text.value').text());
-
 		var bar = svg.selectAll('g.bar')
-			.data(update.reverse()); // HACK: Shouldn't need this
+			.data(update.reverse());
 		
 		bar.select('path.score')
 			.transition()
-				.duration(1000)
+				.delay(250) // hide labels first
+				.duration(500)
 				.attrTween('d', arcTween);
 
 		bar.select('text.score')
-			.transition()
-				.duration(1000)
-				.attr('transform', function(d, i) { return 'translate(' + scoreArc.centroid(d, i) + ')'; })
+			.transition() // fade out labels
+				.duration(250)
+				.style('fill-opacity', 1e-6) // 0
+			.transition() // animate bars
+				.duration(500)
+				.attr('transform', function(d, i) { return 'translate(' + arcLabel(scoreArc, d, i) + ')'; })
+			.transition() // fade labels back in
+				.duration(250)
+				.style('fill-opacity', 1)
 				.text(function(d) { return d.val; });
 
 		var
@@ -232,12 +283,15 @@ var updateScore = function() {
 		// no change; don't animate
 		if (oldSum === newSum) { return; }
 
+		updateFavicon(newSum);
+
 		sumSvg
 			.transition()
-				.duration(500)
+				.duration(250)
 				.style('fill-opacity', 1e-6) // 0
 			.transition()
-				.duration(500)
+				.delay(500)
+				.duration(250)
 				.text(newSum)
 				.style('fill-opacity', 1);
 	});
