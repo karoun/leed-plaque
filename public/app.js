@@ -31,6 +31,14 @@ var
 	barWidth = 40,
 	barPadded = barWidth + barMargin;
 
+/* DATA FUNCTIONS */
+
+var sum = function(arr) {
+	return d3.sum(arr, function(obj) {
+		return obj.val;
+	});
+};
+
 /* DATA */
 
 var DATA = [
@@ -78,40 +86,41 @@ var svg = d3.select('body').append('svg')
 d3.json(UPDATE_URL, function(error, data) {
 	if (error) { return; }
 	
-	var sum = svg.append('g')
+	// Total Score
+	var total = svg.append('g')
 		.classed('sum', true);
 
-	sum.append('circle')
+	total.append('circle')
 		.classed('outer', true)
 		.attr('cx', width / 2)
-		.attr('cy', height / 2 + DATA.length * barMargin)
+		.attr('cy', height / 2 + data.length * barMargin)
 		.attr('r', half)
 		.style('fill', '#888');
 
-	sum.append('circle')
+	total.append('circle')
 		.classed('inner', true)
 		.attr('cx', width / 2)
-		.attr('cy', height / 2 + DATA.length * barMargin)
+		.attr('cy', height / 2 + data.length * barMargin)
 		.attr('r', half - 20)
 		.style('fill', '#888')
 		.attr('stroke', '#eee')
 		.attr('stroke-width', 4);
 
-	sum.append('text')
+	total.append('text')
 		.classed('value', true)
 		.attr('x', width / 2)
-		.attr('y', height / 2 + DATA.length * barMargin)
+		.attr('y', height / 2 + data.length * barMargin)
 		.attr('dy', '.35em')
 		.attr('text-anchor', 'middle')
 		.attr('font-size', 100)
 		.style('fill', '#eee')
-		.text(function() { return d3.sum(DATA, function(d) { return d.val; }); });
+		.text(sum(data));
 
 	// Extensions
 	var ext = svg.append('g')
 		.classed('extensions', true)
 		.selectAll('rect')
-		.data(DATA).enter();
+		.data(data).enter();
 
 	ext.append('rect')
 		.classed('horiz', true)
@@ -142,7 +151,7 @@ d3.json(UPDATE_URL, function(error, data) {
 		.classed('bars', true)
 		.attr('transform', 'translate(' + width / 2 + ', 270)')
 		.selectAll('g.bar')
-		.data(DATA.reverse()) // HACK: Shouldn't need this
+		.data(data.reverse()) // HACK: Shouldn't need this
 	.enter().append('g').classed('bar', true);
 
 	// Background Bars
@@ -172,10 +181,6 @@ var updateScore = function() {
 	d3.json(UPDATE_URL, function(error, update) {
 		if (error) { return; } // TODO: alert the user somehow
 
-		var sum = d3.sum(update, function(obj) {
-			return obj.val;
-		});
-
 		var bar = svg.selectAll('g.bar')
 			.data(update.reverse()); // HACK: Shouldn't need this
 		
@@ -196,7 +201,7 @@ var updateScore = function() {
 				.style('fill-opacity', 1e-6) // 0
 			.transition()
 				.duration(500)
-				.text(sum)
+				.text(sum(update))
 				.style('fill-opacity', 1);
 	});
 };
